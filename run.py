@@ -4,7 +4,7 @@ import yaml
 from shutil import copy
 from argparse import ArgumentParser
 from time import gmtime, strftime
-import models
+from rdac import generator as rdac_generator, kpd as rdac_kpd, discriminator as rdac_discriminator
 from train import train_functions
 from test import test_functions
 from utilities.utils.dataset import FramesDataset,HDACFramesDataset,MRFramesDataset
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         **config['model_params']['common_params'],
         **config['model_params']['generator_params']}
 
-    generator = models.generators[model_id](**generator_params)
+    generator = rdac_generator.RDAC_Generator[model_id](**generator_params)
     print(f"##..{generator.__class__.__name__} LOADED..##")
     
     if torch.cuda.is_available():
@@ -83,13 +83,13 @@ if __name__ == "__main__":
     
     kpd_params = {**config['model_params']['common_params'],
                     **config['model_params']['kp_detector_params']}
-    kp_detector = models.kp_detectors[model_id](**kpd_params)
+    kp_detector = rdac_kpd.RDAC_KPD[model_id](**kpd_params)
     if torch.cuda.is_available():
         kp_detector.to(opt.device_ids[0])
 
     disc_params = {**config['model_params']['common_params'],
                     **config['model_params']['discriminator_params']}
-    discriminator = models.MultiScaleDiscriminator(**disc_params)
+    discriminator = rdac_discriminator.MultiScaleDiscriminator(**disc_params)
     
     if torch.cuda.is_available():
         discriminator = discriminator.to(opt.device_ids[0])
