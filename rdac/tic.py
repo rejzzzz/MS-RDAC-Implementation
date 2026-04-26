@@ -1,5 +1,3 @@
-# Transformer Image Codec - reference frame coding
-
 '''
 Modified from TIC (Lu et al., "Transformer-based Image Compression," DCC2022.)
     Added bitrate interpolation at training and inference time with learned
@@ -11,7 +9,7 @@ import math
 import time
 import torch
 import torch.nn as nn
-from .entropy_models import EntropyBottleneck, GaussianConditional
+from compressai.entropy_models import EntropyBottleneck, GaussianConditional
 from timm.models.layers import trunc_normal_
 from .tic_utils import conv, deconv
 from typing import List, Dict, Any

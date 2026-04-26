@@ -1,0 +1,32 @@
+# Core deep‑learning stack
+torch==2.3.1
+torchvision==0.18.1
+torchmetrics==1.4.0          # used indirectly by some utilities
+timm==1.0.9                  # Vision‑Transformer blocks
+
+# Compression‑related libraries
+compressai==1.2.8           # required by rdac/residual_coders.py
+
+# Image‑processing & scientific stack
+numpy==1.26.4               # compatible with compressai (requires <2.0)
+scikit-image==0.26.0        # provides skimage.draw, io, transform, etc.
+imageio==2.37.3             # used in logger and metrics
+pillow==12.2.0              # for PIL.Image handling
+matplotlib==3.10.9          # visualisation utilities
+tqdm==4.67.3                # progress bars
+
+# Facial‑recognition / metric network
+facenet-pytorch==2.5.2      # provides InceptionResnetV1
+
+# Additional utilities
+opencv-python==4.10.0.84    # visualisation helpers (optional)
+einops==0.8.0               # often required by timm/compressai models
+lazy-loader==0.5            # dependency of scikit-image
+tifffile==2023.7.18         # version compatible with numpy<2.0
+
+# Optional but harmless (already present in the venv)
+typing-extensions==4.12.2   # for Protocol, etc.
+
+psnr_hvsm==0.2.4
+piq==0.8.0
+lpips==0.1.4

@@ -1,7 +1,6 @@
 import os
 import json
 import torch
-import imageio
 import numpy as np
 from tqdm import trange
 # from metrics import Metrics
@@ -9,7 +8,6 @@ from utilities.utils.visualizer import Visualizer
 from torch.utils.data import DataLoader
 from utilities.image_coders import ImageCoder
 from utilities.entropy_coders import KpEntropyCoder
-from utilities.coding_utils import *
 from typing import Protocol
 
 
@@ -25,22 +23,18 @@ class Dataset(Protocol):
     def __getitem__(self):
         ...
 
-
-import os
-import json
-import torch
 import imageio
-import numpy as np
-from tqdm import trange
+
+
 from utilities.metrics import Metrics
 from utilities.utils.visualizer import Visualizer
 from torch.utils.data import DataLoader
 from utilities.image_coders import ImageCoder
-from utilities.coding_utils import *
+from utilities.utils.coding_utils import *
 from PIL import Image
 from typing import Protocol, Dict, Any
 from utilities.entropy_coders import KpEntropyCoder
-from utilities.anchors import HEVC #, VVC_VTM, VvenC
+from utilities.anchors import HEVC, VVC_VTM, VvenC
 
 
 class animation_model(Protocol):
@@ -628,7 +622,8 @@ def test(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
             all_metrics[name[0]] = metrics
             # break
         with open(f"{kwargs['log_dir']}/metrics_{codec.qp}.json", 'w') as f:
-            json.dump(all_metrics, f, indent=4)  
+            json.dump(all_metrics, f, indent=4)
+
 
 def test_rdac(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -696,4 +691,5 @@ def test_rdac(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
     # with open(f"{kwargs['log_dir']}/metrics_{rd_point}.json", 'w') as f:
     #     json.dump(all_metrics, f, indent=4)
   
-test_functions = {'rdac': test_rdac}
+test_functions = {'rdac': test_rdac,
+                  'crdac':test_rdac}

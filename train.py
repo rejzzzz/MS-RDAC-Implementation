@@ -2,7 +2,7 @@
 from tqdm import trange
 import torch
 import os
-import models
+# import models
 from trainers import gen_trainers, disc_trainers
 from utilities.utils.logger import Logger
 from torch.utils.data import DataLoader
