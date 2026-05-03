@@ -20,6 +20,10 @@ if __name__ == "__main__":
                         default="train", 
                         choices=["train", "compress","test"])
     
+    parser.add_argument("--model_id", 
+                        default=None, 
+                        help="model id to use (overrides config filename)")
+    
     parser.add_argument("--project_id", 
                         default='Animation-Based-Codecs', 
                         help="project name")
@@ -60,7 +64,7 @@ if __name__ == "__main__":
         config = yaml.load(f, Loader=yaml.FullLoader)
 
     num_sources = config['dataset_params']['num_sources']-1
-    model_id = os.path.basename(opt.config).split('.')[0]
+    model_id = opt.model_id if opt.model_id else os.path.basename(opt.config).split('.')[0]
     if opt.mode == 'train':
         if opt.checkpoint is not None:
             log_dir = os.path.join(*os.path.split(opt.checkpoint)[:-1])
@@ -74,7 +78,7 @@ if __name__ == "__main__":
         **config['model_params']['common_params'],
         **config['model_params']['generator_params']}
 
-    generator = rdac_generator.RDAC_Generator[model_id](**generator_params)
+    generator = rdac_generator.RDAC_Generator(**generator_params)
     print(f"##..{generator.__class__.__name__} LOADED..##")
     
     if torch.cuda.is_available():
@@ -83,7 +87,7 @@ if __name__ == "__main__":
     
     kpd_params = {**config['model_params']['common_params'],
                     **config['model_params']['kp_detector_params']}
-    kp_detector = rdac_kpd.RDAC_KPD[model_id](**kpd_params)
+    kp_detector = rdac_kpd.RDAC_KPD(**kpd_params)
     if torch.cuda.is_available():
         kp_detector.to(opt.device_ids[0])
 
