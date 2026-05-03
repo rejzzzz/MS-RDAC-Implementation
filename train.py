@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from tqdm import trange
+from tqdm import trange, tqdm
 import torch
 import os
 # import models
@@ -135,7 +135,7 @@ def train_rdac(config,dataset,generator, kp_detector,discriminator,**kwargs ):
     with Logger(log_dir=kwargs['log_dir'], visualizer_params=config['visualizer_params'], checkpoint_freq=train_params['checkpoint_freq']) as logger:
         for epoch in trange(start_epoch, train_params['num_epochs']):
             x, generated = None, None
-            for x in dataloader:
+            for x in tqdm(dataloader, leave=False):
                 if torch.cuda.is_available():
                     for item in x:
                         x[item] = x[item].cuda()                         

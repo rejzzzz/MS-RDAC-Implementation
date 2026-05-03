@@ -1,7 +1,7 @@
 # Core deep‑learning stack
 torch==2.3.1
 torchvision==0.18.1
-torchmetrics==1.4.0          # used indirectly by some utilities
+torchmetrics==1.4.0         # used indirectly by some utilities
 timm==1.0.9                  # Vision‑Transformer blocks
 
 # Compression‑related libraries
@@ -30,3 +30,5 @@ typing-extensions==4.12.2   # for Protocol, etc.
 psnr_hvsm==0.2.4
 piq==0.8.0
 lpips==0.1.4
+PyYAML==6.0.1
+av==17.0.1

@@ -2,6 +2,7 @@ import os
 import json
 import torch
 import numpy as np
+from PIL import Image as PILImage
 from tqdm import trange
 # from metrics import Metrics
 from utilities.utils.visualizer import Visualizer
@@ -50,10 +51,11 @@ class KPD(Protocol):
         ...
 
 class Models:
-    def __init__(self,animation_model: Generator, kp_detector_model: KPD, 
-                 kp_coder: KpEntropyCoder) -> None:
+    def __init__(self,animation_model, kp_detector_model, 
+                 image_coder, kp_coder) -> None:
         self.animation_model = animation_model 
         self.kp_detector_model = kp_detector_model
+        self.image_coder = image_coder
 
         #Entropy coders
         self.kp_coder = kp_coder
@@ -96,8 +98,9 @@ class Outputs:
 
         self.decoded_video = []
         self.visualization = []
+        self.animated_video = []
 
-        self.f_dec=open(f"{out_path}/decoded.rgb",'w') 
+        self.f_dec=open(f"{out_path}/decoded.rgb",'wb') 
 
     def update_decoded(self, dec_frame):
         chw = tensor2rgb(dec_frame)
@@ -255,13 +258,17 @@ def animation_coder(models, input_data,output_data,  visualizer: Visualizer):
         output_data.update_bits_and_time(dec_reference_info)
 
         reference_frame = dec_reference_info['decoded']
+        if isinstance(reference_frame, np.ndarray):
+            reference_frame = frame2tensor(reference_frame)
+        reference_frame = reference_frame.to(input_data.device)
         kp_reference = models.kp_detector_model(reference_frame)
         models.kp_coder.kp_reference = kp_reference
+        ref_fts = models.animation_model.reference_ft_encoder(reference_frame)
         
         output_data.update_decoded(reference_frame)
 
         for idx in trange(1, input_data.gop_size):
-            target_frame = frame2tensor(gop[idx])
+            target_frame = frame2tensor(gop[idx]).to(input_data.device)
             kp_target = models.kp_detector_model(target_frame)
 
             kp_coding_info = models.kp_coder.encode_kp(kp_target = kp_target)
@@ -270,8 +277,13 @@ def animation_coder(models, input_data,output_data,  visualizer: Visualizer):
             kp_target_hat = kp_coding_info['kp_hat']
 
             #animation and residual coding
-            anim_params = {'kp_reference':kp_reference,'kp_target':kp_target_hat}
-            animated_frame = models.animation_model.generate_animation(reference_frame, **anim_params)
+            anim_params = {
+                'reference_frame': reference_frame,
+                'ref_fts': ref_fts,
+                'kp_reference': kp_reference,
+                'kp_target': kp_target_hat
+            }
+            animated_frame = models.animation_model.generate_animation(anim_params)
             residual_frame = target_frame-animated_frame
             # output_data.decoded_video.append(tensor2frame(animated_frame))
             output_data.update_decoded(animated_frame)
@@ -303,14 +315,18 @@ def hybrid_coder(models, input_data,output_data, visualizer: Visualizer, scale_f
         output_data.update_bits_and_time(base_layer_info)
 
         reference_frame = dec_reference_info['decoded']
+        if isinstance(reference_frame, np.ndarray):
+            reference_frame = frame2tensor(reference_frame)
+        reference_frame = reference_frame.to(input_data.device)
         kp_reference = models.kp_detector_model(reference_frame)
         models.kp_coder.kp_reference = kp_reference
+        ref_fts = models.animation_model.reference_ft_encoder(reference_frame)
         
         output_data.update_decoded(reference_frame)
 
         for idx in trange(1,input_data.gop_size):
-            target_frame = frame2tensor(gop[idx])
-            base_layer_frame = frame2tensor(base_layer[idx-1])
+            target_frame = frame2tensor(gop[idx]).to(input_data.device)
+            base_layer_frame = frame2tensor(base_layer[idx-1]).to(input_data.device)
             
             kp_target = models.kp_detector_model(target_frame)
 
@@ -319,9 +335,14 @@ def hybrid_coder(models, input_data,output_data, visualizer: Visualizer, scale_f
 
             kp_target_hat = kp_coding_info['kp_hat']
             #animation and residual coding
-            anim_params = {'kp_reference':kp_reference,'kp_target':kp_target_hat}
-            animated_frame = models.animation_model.generate_animation(reference_frame=reference_frame,
-                        kp_reference=kp_reference,kp_target = kp_target_hat, base_layer = base_layer_frame)
+            anim_params = {
+                'reference_frame': reference_frame,
+                'ref_fts': ref_fts,
+                'kp_reference': kp_reference,
+                'kp_target': kp_target_hat,
+                'base_layer': base_layer_frame
+            }
+            animated_frame = models.animation_model.generate_animation(anim_params)
 
             residual_frame = target_frame - animated_frame
             output_data.update_decoded(animated_frame)
@@ -336,25 +357,29 @@ def hybrid_coder(models, input_data,output_data, visualizer: Visualizer, scale_f
             output_data.visualization.append(viz_img)
     return output_data
 
-def predictive_coder(models, input_data, visualizer: Visualizer,method='rdac'):
-    output_data  = Outputs()
+def predictive_coder(models, input_data, visualizer: Visualizer,method='rdac', out_path='results'):
+    output_data  = Outputs(out_path=out_path)
     for gop in input_data.gops:
         input_data.original_video.extend(gop)
-        org_reference = frame2tensor(gop[0], cuda=False)
+        org_reference = frame2tensor(gop[0]).to(input_data.device)
         dec_reference_info = models.image_coder(org_reference)
         output_data.update_bits_and_time(dec_reference_info)
 
         reference_frame = dec_reference_info['decoded']
+        if isinstance(reference_frame, np.ndarray):
+            reference_frame = frame2tensor(reference_frame)
+        reference_frame = reference_frame.to(input_data.device)
         with torch.no_grad():
             kp_reference = models.kp_detector_model(reference_frame)
             models.kp_coder.kp_reference = kp_reference
+            ref_fts = models.animation_model.reference_ft_encoder(reference_frame)
             
             output_data.decoded_video.append(tensor2frame(reference_frame))
             output_data.animated_video.append(tensor2frame(reference_frame))
             
             prev_latent = None
             for idx in trange(1,input_data.gop_size):
-                target_frame = frame2tensor(gop[idx])
+                target_frame = frame2tensor(gop[idx]).to(input_data.device)
                 kp_target = models.kp_detector_model(target_frame)
 
                 kp_coding_info = models.kp_coder.encode_kp(kp_target = kp_target)
@@ -364,8 +389,13 @@ def predictive_coder(models, input_data, visualizer: Visualizer,method='rdac'):
                 # saliency_map = generate_saliency_map(kp_target_hat['value'],(256,256))
                 saliency_map = None
                 #animation and residual coding
-                anim_params = {'kp_reference':kp_reference,'kp_target':kp_target_hat}
-                animated_frame = models.animation_model.animate(reference_frame, **anim_params)
+                anim_params = {
+                    'reference_frame': reference_frame,
+                    'ref_fts': ref_fts,
+                    'kp_reference': kp_reference,
+                    'kp_target': kp_target_hat
+                }
+                animated_frame = models.animation_model.generate_animation(anim_params)
                 residual_frame = target_frame-animated_frame
                 eval_params = {'rate_idx': input_data.eval_params['rd_point'],
                             'q_value':input_data.eval_params['q_value'],
@@ -563,14 +593,26 @@ def test(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
                 video = x['video']
                 N,h,w,c = video.shape
                 n_frames = min(num_frames, N)
+
+                # Resize frames to model's expected resolution if needed
+                target_h, target_w = config['dataset_params']['frame_shape'][:2]
+                if h != target_h or w != target_w:
+                    resized_frames = []
+                    for fi in range(N):
+                        img = PILImage.fromarray(video[fi])
+                        img = img.resize((target_w, target_h), PILImage.LANCZOS)
+                        resized_frames.append(np.array(img))
+                    video = np.array(resized_frames)
+
                 input_data = Inputs(config['eval_params'])
+                input_data.device = device
                 
                 #update codec params for this sequence
                 input_data.num_frames = n_frames
                 input_data.video = video
                 input_data.create_gops()
                 name = x['name']
-                out_path = os.path.join(kwargs['log_dir'],name[0].split('.')[0])
+                out_path = os.path.join(kwargs['log_dir'], name.split('.')[0])
                 if not os.path.exists(out_path):
                     os.makedirs(out_path)
 
@@ -583,19 +625,19 @@ def test(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
                 else:
                     raise NotImplementedError(f"Codec of type <{model_id}> is not Available!")
                 
-                imageio.mimsave(f"{out_path}/{rd_point}_enh_video.mp4",output_data.decoded_video, fps=10)
-                imageio.mimsave(f"{out_path}/{rd_point}_viz.mp4",output_data.visualization, fps=10)
+                imageio.mimsave(f"{out_path}/{rd_point}_enh_video.mp4",output_data.decoded_video, fps=10, codec='h264')
+                imageio.mimsave(f"{out_path}/{rd_point}_viz.mp4",output_data.visualization, fps=10, codec='h264')
                 
                 if len(output_data.animated_video)== len(output_data.decoded_video):
                     comp_vid = np.concatenate((np.array(input_data.original_video),np.array(output_data.animated_video),np.array(output_data.decoded_video)), axis=2)
                 else:
                     comp_vid = np.concatenate((np.array(input_data.original_video),np.array(output_data.decoded_video)), axis=2)
                 
-                imageio.mimsave(f"{out_path}/{rd_point}_anim_enh.mp4",comp_vid, fps=10)
+                imageio.mimsave(f"{out_path}/{rd_point}_anim_enh.mp4",comp_vid, fps=10, codec='h264')
 
                 metrics = monitor.compute_metrics(input_data.original_video,output_data.decoded_video)
                 metrics.update({'bitrate':output_data.get_bitrate(input_data.fps, input_data.num_frames)})
-                all_metrics[name[0]] = metrics
+                all_metrics[name] = metrics
                 print(metrics)
         with open(f"{kwargs['log_dir']}/metrics_{rd_point}.json", 'w') as f:
             json.dump(all_metrics, f, indent=4)
@@ -610,7 +652,7 @@ def test(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
             codec.num_frames = n_frames
             codec.video = video
             name = x['name']
-            out_path = os.path.join(kwargs['log_dir'],name[0].split('.')[0])
+            out_path = os.path.join(kwargs['log_dir'], name.split('.')[0])
             if not os.path.exists(out_path):
                 os.makedirs(out_path)
 
@@ -619,7 +661,7 @@ def test(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
             codec.run()
             metrics = monitor.compute_metrics(codec.video[:codec.num_frames],codec.decoded_video)
             metrics.update({'bitrate':codec.get_bitrate()})
-            all_metrics[name[0]] = metrics
+            all_metrics[name] = metrics
             # break
         with open(f"{kwargs['log_dir']}/metrics_{codec.qp}.json", 'w') as f:
             json.dump(all_metrics, f, indent=4)
@@ -633,7 +675,7 @@ def test_rdac(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
     visualizer = Visualizer(**config['visualizer_params'])
     monitor = Metrics(config['eval_params']['metrics'],config['eval_params']['per_frame_metrics'])
     #get a pretrained dac_model based on current rdac config
-    pretrained_cpk_path = config['dataset_params']['cpk_path']
+    pretrained_cpk_path = kwargs.get('checkpoint') or config['dataset_params'].get('cpk_path')
     rd_point = config['eval_params']['rd_point']
 
 
@@ -662,34 +704,46 @@ def test_rdac(config,dataset,animation_model_arch, kp_detector_arch,**kwargs ):
             video = x['video']
             N,h,w,c = video.shape
             n_frames = min(num_frames, N)
+
+            # Resize frames to model's expected resolution (256x256) if needed
+            target_h, target_w = config['dataset_params']['frame_shape'][:2]
+            if h != target_h or w != target_w:
+                resized_frames = []
+                for fi in range(N):
+                    img = PILImage.fromarray(video[fi])
+                    img = img.resize((target_w, target_h), PILImage.LANCZOS)
+                    resized_frames.append(np.array(img))
+                video = np.array(resized_frames)
+
             input_data = Inputs(config['eval_params'])
+            input_data.device = device
             
             #update codec params for this sequence
             input_data.num_frames = n_frames
             input_data.video = video
             input_data.create_gops()
             name = x['name']
-            out_path = os.path.join(kwargs['log_dir'],name[0].split('.')[0])
+            out_path = os.path.join(kwargs['log_dir'], name.split('.')[0])
             os.makedirs(out_path, exist_ok=True)
-            output_data = predictive_coder(models,input_data, visualizer)
+            output_data = predictive_coder(models,input_data, visualizer, out_path=out_path)
 
-            imageio.mimsave(f"{out_path}/{rd_point}_enh_video.mp4",output_data.decoded_video, fps=10)
-            imageio.mimsave(f"{out_path}/{rd_point}_viz.mp4",output_data.visualization, fps=10)
+            imageio.mimsave(f"{out_path}/{rd_point}_enh_video.mp4",output_data.decoded_video, fps=10, codec='h264')
+            imageio.mimsave(f"{out_path}/{rd_point}_viz.mp4",output_data.visualization, fps=10, codec='h264')
             
             if len(output_data.animated_video)== len(output_data.decoded_video):
                 comp_vid = np.concatenate((np.array(input_data.original_video),np.array(output_data.animated_video),np.array(output_data.decoded_video)), axis=2)
             else:
                 comp_vid = np.concatenate((np.array(input_data.original_video),np.array(output_data.decoded_video)), axis=2)
             
-            imageio.mimsave(f"{out_path}/{rd_point}_anim_enh.mp4",comp_vid, fps=10)
+            imageio.mimsave(f"{out_path}/{rd_point}_anim_enh.mp4",comp_vid, fps=10, codec='h264')
 
             metrics = monitor.compute_metrics(input_data.original_video,output_data.decoded_video)
             metrics.update({'bitrate':output_data.get_bitrate(input_data.fps, input_data.num_frames)})
-            all_metrics[name[0]] = metrics
+            all_metrics[name] = metrics
             print(metrics)
-            break
-    # with open(f"{kwargs['log_dir']}/metrics_{rd_point}.json", 'w') as f:
-    #     json.dump(all_metrics, f, indent=4)
+            
+    with open(f"{kwargs['log_dir']}/metrics_{rd_point}.json", 'w') as f:
+        json.dump(all_metrics, f, indent=4)
   
 test_functions = {'rdac': test_rdac,
                   'crdac':test_rdac}

@@ -1,9 +1,31 @@
+# Virtual Environments
+venv/
+.venv/
+.venv312/
+.venv_py312/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Project Outputs & Checkpoints
+# log/ (removed to allow tracking results)
+*.pth
+*.pth.tar
+*.pt
+
+# Data & Scratch
+datasets/
+scratch/
+artifacts/
+*.mp4
+*.zip
 *.pdf
 
-.vscode
-
-__pycache__
-
-venv
-
-vox1_dev_txt.zip
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
