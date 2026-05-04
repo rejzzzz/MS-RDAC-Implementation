@@ -133,7 +133,6 @@ class GeneratorFullModel(nn.Module):
             tgt = self.num_target_frames-1 
             
             target = x[f'target_{idx}']
-            # print("Target: ", target.shape)
             animated_frame = generated[f'prediction_{idx}']
             perceptual_loss += self.compute_perp_loss(target,animated_frame)
             if f'bpp_{idx}' in generated:
@@ -147,10 +146,6 @@ class GeneratorFullModel(nn.Module):
                 #this loss applies to the refinement network
                 ref_prediction = generated[f'sr_prediction_{idx}']
                 ref_perp_loss += self.compute_perp_loss(target,ref_prediction)
-            
-            
-            if self.loss_weights['style_loss'] != 0:
-                style_loss += self.compute_style_loss(target, animated_frame)*self.loss_weights['style_loss']
 
 
             if f'enhanced_prediction_{idx}' in generated:

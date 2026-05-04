@@ -28,8 +28,6 @@ class DenseMotionGenerator(nn.Module):
         self.scale_factor = scale_factor
         self.kp_variance = kp_variance
 
-        self.num_levels = 5
-        self.sigma = 1.5
         if self.scale_factor != 1:
             self.down = AntiAliasInterpolation2d(3, self.scale_factor)
 
@@ -70,7 +68,7 @@ class DenseMotionGenerator(nn.Module):
 
     def create_deformed_reference_frame(self, reference_frame, sparse_motions):
         """
-        Eq 7. in the paper \hat{T}_{s<-d}(z)
+        Eq 7. in the paper T_hat_{s<-d}(z)
         """
         bs, _, h, w = reference_frame.shape
         reference_repeat = reference_frame.unsqueeze(1).unsqueeze(1).repeat(1, self.num_kp + 1, 1, 1, 1, 1)
@@ -110,15 +108,4 @@ class DenseMotionGenerator(nn.Module):
             occlusion_map = self.occlusion(prediction)
             out_dict['occlusion_map'] = occlusion_map
         return out_dict
-
-if __name__ == "__main__":
-    from thop import profile
-    img = torch.randn((1,3,64,64))
-
-    kp = {'value': torch.randn((1,10,2))}
-    dmg = DenseMotionGenerator()
-
-    # out = kp_detector(img)
-    # print(out['value'].shape)
-    macs, params = profile(dmg, inputs=(img,kp,kp))
-    print("Macs: ",macs/1e9, " GMACs | #Params: ", params/1e6, " M")
+

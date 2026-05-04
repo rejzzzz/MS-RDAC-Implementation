@@ -12,21 +12,6 @@ def detach_kp(kp):
     return {key: value.detach() for key, value in kp.items()}
 
 
-class MRContrastiveLoss(nn.Module):
-    def __init__(self, margin=1.0):
-        super(MRContrastiveLoss, self).__init__()
-        self.margin = margin
-        
-    def forward(self, output1, output2):
-        # Calculate the Euclidean distance between the two outputs
-        label = torch.tensor([0, 1], dtype=torch.float32).to(output1.device)
-        euclidean_distance = F.pairwise_distance(output1.view(output1.size(0), -1),
-                                                 output2.view(output2.size(0), -1), keepdim=True)
-        
-        # Contrastive loss formula
-        loss = torch.mean((1 - label) * torch.pow(euclidean_distance, 2) +
-                          (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
-        return loss
 
 
 class Vgg19(torch.nn.Module):
@@ -213,27 +198,6 @@ def kp2gaussian(kp, spatial_size, kp_variance):
 
     return out
 
-def kp2gaussian_3d(kp, spatial_size, kp_variance):
-    """
-    Transform a keypoint into gaussian like representation
-    """
-    mean = kp['value']
-
-    coordinate_grid = make_coordinate_grid_3d(spatial_size, mean.type())
-    number_of_leading_dimensions = len(mean.shape) - 1
-    shape = (1,) * number_of_leading_dimensions + coordinate_grid.shape
-    coordinate_grid = coordinate_grid.view(*shape)
-    repeats = mean.shape[:number_of_leading_dimensions] + (1, 1, 1)
-    coordinate_grid = coordinate_grid.repeat(*repeats)
-
-    # Preprocess kp shape
-    shape = mean.shape[:number_of_leading_dimensions] + (1, 1, 3)
-
-    mean = mean.view(*shape)
-    mean_sub = (coordinate_grid - mean)
-    out = torch.exp(-0.5 * (mean_sub ** 2).sum(-1) / kp_variance)
-    return out
-
 def make_coordinate_grid(spatial_size, type):
     """
     Create a meshgrid [-1,1] x [-1,1] of given spatial_size.
@@ -251,60 +215,4 @@ def make_coordinate_grid(spatial_size, type):
     meshed = torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2)], 2)
 
     return meshed
-
-def make_coordinate_grid_3d(spatial_size, type):
-    """
-    Create a meshgrid [-1,1] x [-1,1] of given spatial_size.
-    """
-    h, w = spatial_size
-    x = torch.arange(w).type(type)
-    y = torch.arange(h).type(type)
-    z = torch.arange(h).type(type)
-
-    x = (2 * (x / (w - 1)) - 1)
-    y = (2 * (y / (h - 1)) - 1)
-    z = (2 * (z / (h - 1)) - 1)
-
-    yy = y.view(-1, 1).repeat(1, w)
-    xx = x.view(1, -1).repeat(h, 1)
-    zz = z.view(1, -1).repeat(h, 1)
-
-    meshed = torch.cat([xx.unsqueeze_(2), yy.unsqueeze_(2),zz.unsqueeze_(2)], 2)
-
-    return meshed
-
-
-def sample_features(feature_map,keypoints):
-    cur_dev = feature_map.device
-    B, C, H, W = feature_map.shape
-    _,N,_ = keypoints.shape
-    kp_array = H * (keypoints + 1) / 2
-    idx = torch.cat((torch.arange(B,device=cur_dev).reshape(-1,1,1,1).repeat(1,N,C,1),
-                     torch.arange(C,device=cur_dev).reshape(1,1,-1,1).repeat(B,N,1,1),
-                     kp_array[:,:,[1]].unsqueeze(2).repeat(1,1,C,1),
-                     kp_array[:,:,[0]].unsqueeze(2).repeat(1,1,C,1)),dim=-1).type(torch.long).permute(3,0,1,2)
-    features = feature_map[tuple(idx)]
-    return features
-
-def create_random_mask(tensor):
-    B, C, H, W = tensor.size()
-    
-    # Randomly generate h and w values within the specified range
-    h_min, h_max = int(0.125 * H), int(0.5 * H)
-    w_min, w_max = int(0.125 * W), int(0.5 * W)
-    
-    h_values = torch.randint(h_min, h_max + 1, (B,), device=tensor.device)
-    w_values = torch.randint(w_min, w_max + 1, (B,), device=tensor.device)
-    
-    # Randomly generate start positions
-    start_h = torch.randint(0, H - h_values.max().item() + 1, (B,), device=tensor.device)
-    start_w = torch.randint(0, W - w_values.max().item() + 1, (B,), device=tensor.device)
-    
-    # Create a mask tensor initialized to zeros
-    mask = torch.zeros(B, C, H, W, device=tensor.device)
-    
-    for i in range(B):
-        h, w = h_values[i].item(), w_values[i].item()
-        mask[i, :, start_h[i]:start_h[i] + h, start_w[i]:start_w[i] + w] = 1
-        
-    return mask
+

@@ -182,12 +182,10 @@ class RDAC_Generator(nn.Module):
             
             output_dict['rate'] = bpp
             output_dict["res_hat"] = res_hat 
-            # output_dict['res_latent'] = res_latent     
             output_dict['enhanced_prediction'] = (animated_frame+res_hat).clamp(0,1)
         
         if self.refinement_network:
             ref_pred = self.refinement_network(animated_frame+res_hat)
-            # print(ref_pred.shape)
             output_dict['sr_prediction'] = ref_pred
             output_dict['res_noise'] = ref_pred - output_dict['enhanced_prediction']
         output_dict.update(**dense_motion_params)
@@ -210,7 +208,6 @@ class RDAC_Generator(nn.Module):
                     'rate_idx': kwargs[f'rate_idx']}
         
             if self.residual_coder_params['temporal_residual_coding'] and idx>0:
-                # prev_animation = output_dict[f'enhanced_prediction_{idx-1}'] #.detach().clone()
                 if f'sr_prediction_{idx-1}' in output_dict:
                     prev_animation = output_dict[f'sr_prediction_{idx-1}'].detach().clone()
                 else:
@@ -262,25 +259,4 @@ class RDAC_Generator(nn.Module):
         for item in output:
             output_dict.update({f"{item}_{idx}": output[item]})
         return output_dict
-
-# if __name__ == "__main__":
-#     from thop import profile
-#     reference = torch.randn((1,3,256,256))
-#     kp_reference = {'value': torch.randn((1,10,2), dtype=torch.float32)}
-#     kp_target = {'value': torch.randn((1,10,2), dtype=torch.float32)}
-#     res_coding_info = {'residual_coding':True, 
-#                     'temporal_residual_coding':False,
-#                     'residual_features': 48,
-#                     'residual_type': 'residual',
-#                     'num_intermediate_layers':3,
-#                     'variable_bitrate': True,
-#                     'levels':7}
-#     rec_network_params = {'gen_rec': True, 'sample_noise': False}
-#     generator = RDAC_Generator(motion_compensation=False,multiRes=True,dense_motion_params=None,temporal_animation=False,
-#                               residual_coder_params=res_coding_info,
-#                               rec_network_params=rec_network_params, ref_coder=False)
-#     # out = generator(reference)
-#     # print(out.shape)
-#     macs, params = profile(generator, inputs=(reference,))
-#     print("Macs: ",macs/1e9, " GMACs | #Params: ", params/1e6, " M")
 

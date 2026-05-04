@@ -58,12 +58,4 @@ class RDAC_KPD(nn.Module):
         out = self.region2affine(heatmap)
         out.update({'heatmap': heatmap})        
         return out
-
-
-# if __name__ == "__main__":
-#     from thop import profile
-    
-#     img = torch.randn((1,3,64,64))
-#     kp_detector = RDAC_KPD(estimate_jacobian=False)
-#     macs, params = profile(kp_detector, inputs=(img,))
-#     print("Macs: ",macs/1e9, " GMACs | #Params: ", params/1e6, " M")
+

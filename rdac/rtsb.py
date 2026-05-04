@@ -155,7 +155,6 @@ class WindowAttention(nn.Module):
         v = self.value_proj(x)
 
         q = q.reshape(B_, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
-        # print(q.shape)
 
         k = k.reshape(B_, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
         v = v.reshape(B_, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
@@ -383,12 +382,9 @@ class BasicLayer(nn.Module):
             for i in range(depth)])
             
     def forward(self, x, x_size):
-        attns = []
         for i, blk in enumerate(self.blocks):
             x, _ = blk(x, x_size)
-            attn = None
-            attns.append(attn)
-        return x, attns
+        return x, []
 
     def extra_repr(self) -> str:
         return f"dim={self.dim}, input_resolution={self.input_resolution}, depth={self.depth}"

@@ -197,7 +197,6 @@ class ResidualCoder(CompressionModel):
             gaussian_params = self.h_s(z_hat)
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
             
-            # scale_h, mean_h = self.get_averages(scales_hat, means_hat, H,W)
             indexes = self.gaussian_conditional.build_indexes(scales_hat)
             y_strings = self.gaussian_conditional.compress(y, indexes, means=means_hat)
             bts = (len(y_strings[0])+len(z_strings[0])) * 8
@@ -389,7 +388,6 @@ class ConditionalResidualCoder(CompressionModel):
 
     def rans_compress(self, residual, animated_frame,  prev_res_hat=None,prev_latent=None, rate_idx=0,q_value=1.0,scale_factor=1.0,use_skip=False, skip_thresh=0.9):
         enc_start = time.time()
-        # self.scale_factor = scale_factor
         B,C,H,W = residual.shape
         if scale_factor != 1:
             residual = self.resize(residual,scale_factor)
@@ -426,7 +424,6 @@ class ConditionalResidualCoder(CompressionModel):
             gaussian_params = self.h_s(z_hat)
             scales_hat, means_hat = gaussian_params.chunk(2, 1)
             
-            # scale_h, mean_h = self.get_averages(scales_hat, means_hat, H,W)
             indexes = self.gaussian_conditional.build_indexes(scales_hat)
             y_strings = self.gaussian_conditional.compress(y, indexes, means=means_hat)
             bts = (len(y_strings[0])+len(z_strings[0])) * 8
@@ -464,17 +461,4 @@ class ConditionalResidualCoder(CompressionModel):
             x_hat = self.resize(x_hat, 1//scale_factor)
         return x_hat
    
-
-if __name__ == "__main__":
-
-    from thop import profile
-    
-    img = torch.randn((1,3,256,256))
-    rdc = ResidualCoder(3,3,48,int(48*1.5),variable_bitrate=True,levels=6,num_intermediate_layers=3)
-    
-    macs, params = profile(rdc, inputs=(img,))
-    print("RDC|| GMacs: ",macs/1e9, " | #Params: ", params/1e6, " M")
-
-    crdc = ConditionalResidualCoder(3,3,48,int(48*1.5),variable_bitrate=True,levels=6,num_intermediate_layers=3)
-    macs, params = profile(crdc, inputs=(img,img))
-    print("CRDC|| GMacs: ",macs/1e9, " | #Params: ", params/1e6, " M")
+
