@@ -231,6 +231,9 @@ class VMAF(MetricParent):
 
         write_yuv(org, fp_o, self.bits)
         write_yuv(dec, fp_r, self.bits)
+        
+        fp_o.close()
+        fp_r.close()
 
         out_f = tempfile.NamedTemporaryFile(delete=False)
         out_f.close()

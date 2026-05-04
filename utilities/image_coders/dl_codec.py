@@ -12,15 +12,29 @@ def count_bytes(strings):
 class AImageCodec:
     def __init__(self, qp=1, device='cpu') -> None:
         self.codec = cheng2020_attn(quality=qp, pretrained=True).to(device)
+        self.codec.eval()
+        self._device = device
     
+    def _ensure_device(self, device):
+        """Move codec to the same device as the input tensor if needed."""
+        if str(device) != str(self._device):
+            self.codec = self.codec.to(device)
+            self._device = str(device)
+
     def run(self, img):
+        # Auto-move codec to match input device
+        if isinstance(img, torch.Tensor):
+            self._ensure_device(img.device)
+        
         enc_start = time.time()
-        info = self.codec.compress(img)
+        with torch.no_grad():
+            info = self.codec.compress(img)
         enc_time = time.time()-enc_start
         total_bits = count_bytes(info['strings'])*8
 
         dec_start = time.time()
-        dec_info = self.codec.decompress(**info)
+        with torch.no_grad():
+            dec_info = self.codec.decompress(**info)
         dec_time = time.time()-dec_start
         rec = dec_info['x_hat']
         out = {

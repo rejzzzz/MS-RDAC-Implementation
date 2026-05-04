@@ -46,8 +46,8 @@ class FramesDataset(Dataset):
                 frames = os.listdir(path)
                 n_frames = len(frames) 
             else:
-                video = iio.imread(f"{path}", plugin='pyav')
-                n_frames = len(video) 
+                props = iio.improps(f"{path}", plugin='pyav')
+                n_frames = props.shape[0]
 
             src_idx = np.random.choice(n_frames//2)
             drv_idx = np.random.choice(range(n_frames//2, n_frames-(self.num_sources*self.tgt_delta)))
@@ -73,7 +73,7 @@ class FramesDataset(Dataset):
             else:
                 video_array = []
                 for idx in frame_idx:
-                    video_array.append(resize_fn(video[idx]))
+                    video_array.append(resize_fn(iio.imread(f"{path}", plugin='pyav', index=idx)))
 
             if self.transform is not None:
                 video_array = self.transform(video_array)
@@ -132,8 +132,8 @@ class MRFramesDataset(FramesDataset):
                 frames = os.listdir(path)
                 n_frames = len(frames) 
             else:
-                video = iio.imread(f"{path}", plugin='pyav')
-                n_frames = len(video) 
+                props = iio.improps(f"{path}", plugin='pyav')
+                n_frames = props.shape[0]
 
             frame_idx = np.random.choice(range(n_frames), size=self.num_sources, replace=False)
             out['rf_weights'] = frame_idx
@@ -153,7 +153,7 @@ class MRFramesDataset(FramesDataset):
             else:
                 video_array = []
                 for idx in frame_idx:
-                    video_array.append(resize_fn(video[idx]))
+                    video_array.append(resize_fn(iio.imread(f"{path}", plugin='pyav', index=idx)))
    
             if self.transform is not None:
                 video_array = self.transform(video_array)
@@ -217,8 +217,8 @@ class HDACFramesDataset(Dataset):
                 out.update({'lambda_value': self.base_layer_params['qp_values'][bl_qp]['lmbda'],
                             'bitrate': self.base_layer_params['qp_values'][bl_qp]['bitrate']})
    
-            video = iio.imread(f"{path}", plugin='pyav')
-            n_frames = len(video) 
+            props = iio.improps(f"{path}", plugin='pyav')
+            n_frames = props.shape[0] 
 
             src_idx = np.random.choice(n_frames//2)
             drv_idx = np.random.choice(range(n_frames//2, n_frames-(self.num_sources*self.tgt_delta)))
@@ -232,14 +232,13 @@ class HDACFramesDataset(Dataset):
             
             video_array = []
             for idx in frame_idx:
-                video_array.append(video[idx])
+                video_array.append(iio.imread(f"{path}", plugin='pyav', index=idx))
 
             video_array = img_as_float32(video_array)
             if self.base_layer:
-                bl_video = iio.imread(f"{bl_path}", plugin="pyav")
                 bl_video_array = []
                 for idx in frame_idx:
-                    bl_video_array.append(bl_video[idx])
+                    bl_video_array.append(iio.imread(f"{bl_path}", plugin="pyav", index=idx))
                 bl_video_array = img_as_float32(bl_video_array)
                 video_array = np.concatenate([video_array,bl_video_array],axis=0)
 

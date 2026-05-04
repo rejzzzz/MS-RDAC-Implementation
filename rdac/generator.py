@@ -245,7 +245,7 @@ class RDAC_Generator(nn.Module):
         def_ref_fts, _ = self.motion_prediction_and_compensation(**motion_pred_params)
         out_ft_maps = self.bottleneck(def_ref_fts) #input the weighted average 
         #reconstruct the animated frame
-        return self.animated_frame_decoder(out_ft_maps ,params['reference_frame'])
+        return self.animated_frame_decoder(out_ft_maps)
     
 
     def compress_spatial_residual(self,residual_frame:torch.Tensor, prev_latent:torch.Tensor=None,
