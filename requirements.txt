@@ -5,7 +5,7 @@ torchmetrics==1.4.0         # used indirectly by some utilities
 timm==1.0.9                  # Vision‑Transformer blocks
 
 # Compression‑related libraries
-compressai==1.2.8           # required by rdac/residual_coders.py
+compressai==1.2.8           # required by codec/residual_coders.py
 
 # Image‑processing & scientific stack
 numpy==1.26.4               # compatible with compressai (requires <2.0)
@@ -32,3 +32,6 @@ piq==0.8.0
 lpips==0.1.4
 PyYAML==6.0.1
 av==17.0.1
+IQA-pytorch==0.3.4
+DISTS-pytorch==0.1
+pytorch-msssim==1.0.0
