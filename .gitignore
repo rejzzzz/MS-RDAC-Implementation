@@ -3,29 +3,92 @@ venv/
 .venv/
 .venv312/
 .venv_py312/
+env/
+ENV/
 
-# Python Cache
+# Python Cache & Compiled
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
 
 # Project Outputs & Checkpoints
-# log/ (removed to allow tracking results)
 *.pth
 *.pth.tar
 *.pt
+*.ckpt
+checkpoint*/
+checkpoints/
+
+# Logs & Temporary Files
+log/
+logs/
+*.log
+*.tmp
+*_temp.bin
+decoding.bin
+inp_temp.bin
+out_temp.bin
 
 # Data & Scratch
 datasets/
 scratch/
 artifacts/
+data/
 *.mp4
+*.avi
+*.mov
 *.zip
+*.tar
+*.tar.gz
 *.pdf
+*.pkl
+*.pickle
 
-# IDE / OS
+# IDE / Editor
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 .DS_Store
 Thumbs.db
+.project
+.pydevproject
+.settings/
+
+# Jupyter & Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation
+pdf_text.txt
+*.md~
+
+# OS Files
+.DS_Store
+Thumbs.db
+.directory
+*.lnk
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Misc
+*.bak
+*.orig
+.cache/
+node_modules/

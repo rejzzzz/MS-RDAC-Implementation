@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rdac-implementation"
+version = "0.1.0"
+readme = "readme.md"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Pylance/Pyright: packages live under src/ (editable install adds them at runtime)
+[tool.pyright]
+extraPaths = ["src"]
+include = ["apps", "src"]
